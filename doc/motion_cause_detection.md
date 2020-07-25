@@ -22,7 +22,7 @@ Having bounding box sequences of the target object and humans for each frame (th
 
 Our method archives 93.3% accuracy on our dataset comprised of 60 video segments (56 out of 60).
 
-To give an intuition on how our method works, we provide a [video](https://www.dropbox.com/s/nr397uho75ahpbj/Adam%20Visual%20Perception.mp4?dl=0) that shows the bounding box sequence of the target object and humans at each frame for several examples. 
+To give an intuition on how our method works, we provide a [video](https://youtu.be/5AMeJr-7lJg) that shows the bounding box sequence of the target object and humans at each frame for several examples. 
 
 # Scripts: Step-by-step guide
 
