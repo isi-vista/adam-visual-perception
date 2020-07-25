@@ -131,6 +131,7 @@ dmypy.json
 # Data dir
 results/
 yolo/yolov3.weights
+models/shape_predictor_68_face_landmarks.dat
 dlib/
 tmp/
 log/
