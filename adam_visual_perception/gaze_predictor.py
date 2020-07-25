@@ -46,7 +46,7 @@ class GazePredictor:
         self.mix_priority = mix_priority
         self.use_gpu = use_gpu
 
-        self.head_gaze_estimator = HeadGazeEstimator(write_video=write_video)
+        self.head_gaze_estimator = HeadGazeEstimator()
         self.body_gaze_estimator = BodyGazeEstimator()
 
     def choose_object(self, ray, bboxes, two_lines, length=100000):
@@ -107,9 +107,75 @@ class GazePredictor:
                     min_dist_index = i
 
         if min_dist_facing < length:
-            return min_dist_facing_index
+            return min_dist_facing_index, A, C
         else:
-            return min_dist_other_index
+            return min_dist_other_index, A, C
+
+    def save_video_file(self, filename, bboxes, rays, prediction):
+        """
+        Add the gaze ray and tracking objects for each frame of the video
+        """
+        # Capture the video
+        cap = cv2.VideoCapture(filename)
+        frame_no = 0
+
+        # Loop over the frames from the video stream
+        while True:
+            success, frame = cap.read()
+            if not success:
+                if frame_no == 0:
+                    print("Failed to read video")
+                    sys.exit(1)
+                else:
+                    break
+            if frame_no == 0:
+                # Initialize our video writer
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                par_path = os.path.abspath(os.path.join(filename, os.pardir))
+
+                if self.use_head and not self.use_body:
+                    dir_path += "_head"
+                elif not self.use_head and self.use_body:
+                    dir_path += "_body"
+                else:
+                    dir_path += "_mixed_" + self.mix_priority
+
+                if not os.path.isdir(dir_path):
+                    os.makedirs(dir_path)
+
+                video_path = os.path.join(dir_path, os.path.basename(filename))
+                writer = cv2.VideoWriter(
+                    video_path, fourcc, 30, (frame.shape[1], frame.shape[0]), True
+                )
+
+            # Add tracked objects
+            rectangles = bboxes[frame_no]
+            for i, bbox in enumerate(rectangles):
+                x, y = int(bbox[0]), int(bbox[1])
+                w, h = int(bbox[2]), int(bbox[3])
+
+                if i + 1 == prediction:
+                    color = color_red
+                else:
+                    color = color_blue
+                # Draw bounding boxes
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2, 1)
+
+            # Add gaze ray
+            if frame_no in rays:
+                ray = rays[frame_no]
+                p1 = (int(ray[0][0]), int(ray[0][1]))
+                p2 = (int(ray[1][0]), int(ray[1][1]))
+                cv2.line(frame, p1, p2, (0, 255, 0), 2)
+
+            key = cv2.waitKey(1) & 0xFF
+
+            writer.write(frame)
+            frame_no += 1
+
+        # Cleanup
+        cv2.destroyAllWindows()
+        writer.release()
 
     def predict(self, filename, bboxes):
         """
@@ -158,14 +224,26 @@ class GazePredictor:
             return np.random.randint(1, 5)
 
         preds_per_frame = []
+
+        if self.write_video:
+            ray_visual = {}
+
         gaze_rays_sorted = OrderedDict(sorted(gaze_rays.items()))
         for frame_no, ray in gaze_rays_sorted.items():
             try:
-                pred = self.choose_object(ray, bbox_history[frame_no], two_lines)
+                pred, ray_orig, ray_end = self.choose_object(
+                    ray, bbox_history[frame_no], two_lines
+                )
+                if self.write_video:
+                    ray_visual[frame_no] = (ray_orig, ray_end)
                 preds_per_frame.append(pred)
             except IndexError:
                 continue
 
         most_common = max(range(4), key=preds_per_frame.count)
+        index = 1 + most_common
 
-        return 1 + most_common
+        if self.write_video:
+            self.save_video_file(filename, bbox_history, ray_visual, index)
+
+        return index
