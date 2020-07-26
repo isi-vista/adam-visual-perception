@@ -35,6 +35,8 @@ The table below illustrates the results of our experiments on 50 video segments.
 
 The *mixed* heuristic that equally prioritises head- and body-landmark based gaze estimators outperform other configurations with 98% accuracy (49 out of 50).
 
+To give an intuition on how our method works, we provide a [video](https://youtu.be/3gW4axWnF5E) that illustrated the gaze ray based on which one of the objects in the bounding boxes is chosen.
+
 # Scripts: Step-by-step guide
 
 Please follow the following steps to replicate the results of our experiments:
